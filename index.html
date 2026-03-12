@@ -1568,14 +1568,15 @@ function viewRoundScorecard(roundId) {
 
   // Create a temporary full-screen view
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:white;z-index:500;overflow-y:auto;padding:16px';
+  overlay.id = 'scorecard-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:white;z-index:500;overflow-y:auto;padding:16px;padding-bottom:40px';
   overlay.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div>
         <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--green-dark)">${rd.name}</div>
         <div style="font-size:0.75rem;color:var(--gray-600)">${fmtDate(rd.date)} · ${rd.format || 'Stroke Play'}</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="this.closest('[style]').remove()">✕ Close</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('scorecard-overlay').remove()">✕ Close</button>
     </div>
     ${front.length > 0 ? `<div style="font-size:0.75rem;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Front 9</div>
     <div class="scorecard-wrap" style="margin-bottom:14px">${buildSection(front, 'OUT')}</div>` : ''}
@@ -1604,7 +1605,8 @@ function viewRoundScorecard(roundId) {
           </div>
         </div>`;
       }).join('')}
-    </div>`;
+    </div>
+    <button class="btn btn-secondary btn-lg" style="margin-top:16px" onclick="document.getElementById('scorecard-overlay').remove()">✕ Close Scorecard</button>`;
   document.body.appendChild(overlay);
 }
 

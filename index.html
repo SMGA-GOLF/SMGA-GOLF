@@ -428,6 +428,17 @@
   @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
   @keyframes toastOut { to { opacity:0; transform:translateX(-50%) translateY(10px); } }
 
+  .quick-day-btn {
+    background: var(--green-pale); border: 2px solid var(--green-light);
+    border-radius: 10px; padding: 12px 6px; cursor: pointer;
+    text-align: center; transition: all 0.15s; width: 100%;
+  }
+  .quick-day-btn:hover { background: var(--green-light); border-color: var(--green); }
+  .quick-day-btn:hover .quick-day, .quick-day-btn:hover .quick-sub { color: white; }
+  .quick-day-btn:active { transform: scale(0.96); }
+  .quick-day { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--green-dark); }
+  .quick-sub { font-size: 0.68rem; color: var(--gray-600); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
   .section-title {
     font-family: 'Playfair Display', serif; font-size: 0.85rem; font-weight: 600;
     color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.08em;
@@ -516,8 +527,31 @@
 <!--  ROUNDS                                    -->
 <!-- ══════════════════════════════════════════ -->
 <div id="page-rounds" class="page">
+
+  <!-- Quick Start -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header">
+      <div class="card-title">⚡ Quick Start</div>
+      <div style="font-size:0.72rem;color:var(--gray-400)">Front 9 · Stroke Play</div>
+    </div>
+    <div style="padding:12px 14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <button class="quick-day-btn" onclick="quickStartRound('Monday')">
+        <div class="quick-day">Mon</div>
+        <div class="quick-sub">Front 9</div>
+      </button>
+      <button class="quick-day-btn" onclick="quickStartRound('Tuesday')">
+        <div class="quick-day">Tue</div>
+        <div class="quick-sub">Front 9</div>
+      </button>
+      <button class="quick-day-btn" onclick="quickStartRound('Wednesday')">
+        <div class="quick-day">Wed</div>
+        <div class="quick-sub">Front 9</div>
+      </button>
+    </div>
+  </div>
+
   <div style="display:flex;gap:8px;margin-bottom:14px">
-    <button class="btn btn-primary" style="flex:1" onclick="openCreateRound()">+ Create Round</button>
+    <button class="btn btn-primary" style="flex:1" onclick="openCreateRound()">+ Custom Round</button>
     <button class="btn btn-outline" style="flex:1" onclick="openJoinRound()">Join Round</button>
   </div>
 
@@ -1058,6 +1092,44 @@ function roundCardHTML(rd, isActive) {
       </div>`}
     </div>
   </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  QUICK START RECURRING ROUNDS
+// ═══════════════════════════════════════════════════════════
+async function quickStartRound(dayName) {
+  const today = new Date().toISOString().split('T')[0];
+  const round = {
+    name: dayName + ' League',
+    date: today,
+    format: 'Stroke Play',
+    holes: 9,
+    nineChoice: 'front',
+    round_code: genCode(),
+    scores: {},
+    tees: {},
+    pars: [],
+    gross: 0,
+    total_par: 0,
+    holes_played: 0,
+    completed: false
+  };
+
+  const result = await sbFetch('rounds', {
+    method: 'POST',
+    body: JSON.stringify({ ...round, scores: JSON.stringify(round.scores), tees: JSON.stringify(round.tees), pars: JSON.stringify(round.pars) })
+  });
+
+  if (result && result[0]) {
+    result[0].scores = {};
+    result[0].tees = {};
+    result[0].pars = [];
+    rounds.unshift(result[0]);
+    renderRounds();
+    showToast(dayName + ' round created! Code: ' + round.round_code);
+  } else {
+    showToast('Error creating round');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════

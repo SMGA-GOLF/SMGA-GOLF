@@ -504,6 +504,7 @@
     <div class="nav-tab" onclick="showPage('schedule')">📅 Schedule</div>
     <div class="nav-tab" onclick="showPage('stats')">📊 Stats</div>
     <div class="nav-tab" onclick="showPage('roster')">👥 Roster</div>
+    <div class="nav-tab" onclick="showPage('admin')">⚙️ Admin</div>
   </div>
 </nav>
 
@@ -623,6 +624,75 @@
     <div id="roster-list">
       <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No members added yet</div></div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  ADMIN                                     -->
+<!-- ══════════════════════════════════════════ -->
+<div id="page-admin" class="page">
+
+  <!-- PIN GATE -->
+  <div id="admin-locked">
+    <div class="card">
+      <div class="card-body" style="text-align:center;padding:32px 20px">
+        <div style="font-size:2.5rem;margin-bottom:8px">🔒</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--green-dark);margin-bottom:4px">Admin Access</div>
+        <div style="font-size:0.82rem;color:var(--gray-600);margin-bottom:20px">Enter PIN to manage scores and rounds</div>
+        <input class="form-input" id="admin-pin-input" type="password" placeholder="Enter PIN" maxlength="6"
+          style="text-align:center;font-size:1.3rem;letter-spacing:0.3em;max-width:180px;margin:0 auto 14px"
+          onkeydown="if(event.key==='Enter') checkAdminPin()">
+        <br>
+        <button class="btn btn-primary" onclick="checkAdminPin()">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN CONTENT (hidden until unlocked) -->
+  <div id="admin-content" style="display:none">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--green-dark)">⚙️ Admin Panel</div>
+      <button class="btn btn-secondary btn-sm" onclick="lockAdmin()">🔒 Lock</button>
+    </div>
+
+    <!-- Select Round -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-body">
+        <label class="form-label">Select Round to Edit</label>
+        <select class="form-select" id="admin-round-select" onchange="loadAdminRound()">
+          <option value="">— Choose a round —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Round Actions -->
+    <div id="admin-round-actions" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header">
+          <div class="card-title" id="admin-round-title">Round Name</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" id="admin-toggle-complete" onclick="adminToggleComplete()">Mark Complete</button>
+            <button class="btn btn-danger btn-sm" onclick="adminDeleteRound()">🗑 Delete</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="admin-round-meta" style="font-size:0.78rem;color:var(--gray-600);margin-bottom:12px"></div>
+
+          <!-- Per-player score editing -->
+          <div id="admin-players-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Players -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Manage Members</div>
+      </div>
+      <div id="admin-players-roster"></div>
+    </div>
+
   </div>
 </div>
 
@@ -779,6 +849,30 @@
   </div>
 </div>
 
+<!-- Edit Score -->
+<div class="modal-overlay" id="modal-edit-score">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="edit-score-title">Edit Score</div>
+    <div style="text-align:center;margin:16px 0">
+      <div style="font-size:0.78rem;color:var(--gray-600);margin-bottom:12px" id="edit-score-info"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px">
+        <button class="score-btn minus" style="width:48px;height:48px;font-size:1.5rem" onclick="editScoreAdjust(-1)">−</button>
+        <div>
+          <div class="score-val" id="edit-score-val" style="font-size:2rem">4</div>
+          <div class="score-label" id="edit-score-label"></div>
+        </div>
+        <button class="score-btn plus" style="width:48px;height:48px;font-size:1.5rem" onclick="editScoreAdjust(1)">+</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-edit-score')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="editScoreClear()">Clear</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditScore()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 //  COURSE DATA
@@ -925,7 +1019,7 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  const tabs = { leaderboard:0, rounds:1, scoring:2, schedule:3, stats:4, roster:5 };
+  const tabs = { leaderboard:0, rounds:1, scoring:2, schedule:3, stats:4, roster:5, admin:6 };
   document.querySelectorAll('.nav-tab')[tabs[id]]?.classList.add('active');
   if (id === 'leaderboard') renderLeaderboard();
   if (id === 'rounds') renderRounds();
@@ -933,6 +1027,7 @@ function showPage(id) {
   if (id === 'stats') renderStatsPage();
   if (id === 'roster') renderRoster();
   if (id === 'schedule') renderSchedule();
+  if (id === 'admin') renderAdminPage();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1824,6 +1919,297 @@ setInterval(async () => {
     }
   }
 }, 30000);
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN
+// ═══════════════════════════════════════════════════════════
+const ADMIN_PIN = '1234'; // Change this to whatever PIN you want
+let adminUnlocked = false;
+let adminEditRound = null;
+let editScorePlayerId = null;
+let editScoreHoleIndex = null;
+
+function checkAdminPin() {
+  const val = document.getElementById('admin-pin-input').value;
+  if (val === ADMIN_PIN) {
+    adminUnlocked = true;
+    document.getElementById('admin-locked').style.display = 'none';
+    document.getElementById('admin-content').style.display = 'block';
+    renderAdminPage();
+  } else {
+    showToast('Incorrect PIN');
+    document.getElementById('admin-pin-input').value = '';
+  }
+}
+
+function lockAdmin() {
+  adminUnlocked = false;
+  document.getElementById('admin-locked').style.display = 'block';
+  document.getElementById('admin-content').style.display = 'none';
+  document.getElementById('admin-pin-input').value = '';
+}
+
+function renderAdminPage() {
+  if (!adminUnlocked) return;
+
+  // Populate round select
+  const sel = document.getElementById('admin-round-select');
+  sel.innerHTML = '<option value="">— Choose a round —</option>' +
+    rounds.map(r => `<option value="${r.id}">${r.name} · ${fmtDate(r.date)} ${r.completed ? '(done)' : '(active)'}</option>`).join('');
+
+  // Roster management
+  const rosterEl = document.getElementById('admin-players-roster');
+  if (players.length === 0) {
+    rosterEl.innerHTML = '<div class="empty-state"><div class="empty-text">No members yet</div></div>';
+  } else {
+    rosterEl.innerHTML = players.map(p => `
+      <div class="player-row">
+        <div class="lb-avatar" style="background:${avatarColor(p.name)};width:34px;height:34px;font-size:0.78rem">${initials(p.name)}</div>
+        <div class="player-info">
+          <div class="player-name">${p.name}</div>
+          <div class="player-meta">HCP: ${p.hcp} · GHIN: ${p.ghin || '—'}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" onclick="adminEditPlayer('${p.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="adminDeletePlayer('${p.id}')">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function loadAdminRound() {
+  const id = document.getElementById('admin-round-select').value;
+  if (!id) { document.getElementById('admin-round-actions').style.display = 'none'; return; }
+  adminEditRound = rounds.find(r => r.id === id);
+  if (!adminEditRound) return;
+
+  document.getElementById('admin-round-actions').style.display = 'block';
+  document.getElementById('admin-round-title').textContent = adminEditRound.name;
+  document.getElementById('admin-round-meta').textContent =
+    fmtDate(adminEditRound.date) + ' · ' + (adminEditRound.format || 'Stroke Play') +
+    ' · ' + (adminEditRound.holes || 18) + ' holes · Code: ' + (adminEditRound.round_code || '—');
+
+  const toggleBtn = document.getElementById('admin-toggle-complete');
+  toggleBtn.textContent = adminEditRound.completed ? 'Reopen Round' : 'Mark Complete';
+  toggleBtn.className = adminEditRound.completed ? 'btn btn-secondary btn-sm' : 'btn btn-gold btn-sm';
+
+  renderAdminPlayerScores();
+}
+
+function renderAdminPlayerScores() {
+  if (!adminEditRound) return;
+  const holesList = getHolesForRound(adminEditRound);
+  const el = document.getElementById('admin-players-list');
+  const participants = Object.keys(adminEditRound.scores || {});
+
+  if (participants.length === 0) {
+    el.innerHTML = '<div style="font-size:0.82rem;color:var(--gray-400);text-align:center;padding:12px">No players in this round yet</div>';
+    return;
+  }
+
+  el.innerHTML = participants.map(pid => {
+    const p = players.find(pl => pl.id === pid);
+    if (!p) return '';
+    const tee = (adminEditRound.tees || {})[pid] || 'gold';
+    const chcp = courseHcp(parseFloat(p.hcp || 0), tee);
+    const pScores = (adminEditRound.scores[pid] || []);
+
+    const scoreCells = holesList.map((h, i) => {
+      const s = pScores[i];
+      const { cls } = s > 0 ? scoreLabel(s, h.par) : { cls: '' };
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div style="font-size:0.65rem;color:var(--gray-400);font-family:'DM Mono',monospace">${h.hole}</div>
+        <button onclick="openEditScore('${pid}', ${i})"
+          style="width:32px;height:32px;border-radius:6px;border:1.5px solid var(--gray-200);
+          background:${s > 0 ? 'white' : 'var(--gray-100)'};font-family:'DM Mono',monospace;
+          font-size:0.85rem;font-weight:700;cursor:pointer;
+          color:${s > 0 ? 'var(--gray-800)' : 'var(--gray-400)'}">
+          ${s > 0 ? s : '—'}
+        </button>
+        <div style="font-size:0.6rem;color:var(--gray-400)">p${h.par}</div>
+      </div>`;
+    }).join('');
+
+    let gross = 0, net = 0;
+    holesList.forEach((h, i) => {
+      const s = pScores[i];
+      if (s > 0) { gross += s; net += s - strokesOnHole(chcp, h.hcp); }
+    });
+
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div class="lb-avatar" style="background:${avatarColor(p.name)};width:30px;height:30px;font-size:0.72rem;flex-shrink:0">${initials(p.name)}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:0.88rem">${p.name}</div>
+          <div style="font-size:0.7rem;color:var(--gray-600)">${COURSE.tees[tee].label} · HCP ${chcp}</div>
+        </div>
+        <div style="text-align:right;font-family:'DM Mono',monospace;font-size:0.82rem">
+          <span style="color:var(--green-dark);font-weight:700">${gross || '—'}</span>
+          <span style="color:var(--gray-400)"> / ${net || '—'}</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="adminClearPlayerScores('${pid}')">🗑</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${scoreCells}</div>
+    </div>`;
+  }).join('');
+}
+
+function openEditScore(playerId, holeIndex) {
+  editScorePlayerId = playerId;
+  editScoreHoleIndex = holeIndex;
+  const holesList = getHolesForRound(adminEditRound);
+  const hole = holesList[holeIndex];
+  const p = players.find(pl => pl.id === playerId);
+  const curScore = (adminEditRound.scores[playerId] || [])[holeIndex] || hole.par;
+
+  document.getElementById('edit-score-title').textContent = `Edit Score — Hole ${hole.hole}`;
+  document.getElementById('edit-score-info').textContent = `${p?.name} · Par ${hole.par} · HCP ${hole.hcp}`;
+  document.getElementById('edit-score-val').textContent = curScore;
+  updateEditScoreLabel(curScore, hole.par);
+  openModal('modal-edit-score');
+}
+
+function editScoreAdjust(delta) {
+  const holesList = getHolesForRound(adminEditRound);
+  const hole = holesList[editScoreHoleIndex];
+  const cur = parseInt(document.getElementById('edit-score-val').textContent) || hole.par;
+  const next = Math.max(1, cur + delta);
+  document.getElementById('edit-score-val').textContent = next;
+  updateEditScoreLabel(next, hole.par);
+}
+
+function updateEditScoreLabel(score, par) {
+  const { label } = scoreLabel(score, par);
+  document.getElementById('edit-score-label').textContent = label;
+}
+
+function editScoreClear() {
+  document.getElementById('edit-score-val').textContent = '0';
+  document.getElementById('edit-score-label').textContent = 'No score';
+}
+
+async function saveEditScore() {
+  const newScore = parseInt(document.getElementById('edit-score-val').textContent) || 0;
+  const scores = JSON.parse(JSON.stringify(adminEditRound.scores));
+  if (!scores[editScorePlayerId]) scores[editScorePlayerId] = [];
+  scores[editScorePlayerId][editScoreHoleIndex] = newScore;
+
+  await sbFetch('rounds?id=eq.' + adminEditRound.id, {
+    method: 'PATCH',
+    body: JSON.stringify({ scores: JSON.stringify(scores) })
+  });
+
+  adminEditRound.scores = scores;
+  const rd = rounds.find(r => r.id === adminEditRound.id);
+  if (rd) rd.scores = scores;
+
+  closeModal('modal-edit-score');
+  renderAdminPlayerScores();
+  renderLeaderboard();
+  showToast('Score updated!');
+}
+
+async function adminClearPlayerScores(playerId) {
+  if (!confirm('Clear all scores for this player?')) return;
+  const scores = JSON.parse(JSON.stringify(adminEditRound.scores));
+  const holeCount = getHolesForRound(adminEditRound).length;
+  scores[playerId] = new Array(holeCount).fill(0);
+
+  await sbFetch('rounds?id=eq.' + adminEditRound.id, {
+    method: 'PATCH',
+    body: JSON.stringify({ scores: JSON.stringify(scores) })
+  });
+
+  adminEditRound.scores = scores;
+  const rd = rounds.find(r => r.id === adminEditRound.id);
+  if (rd) rd.scores = scores;
+
+  renderAdminPlayerScores();
+  showToast('Scores cleared');
+}
+
+async function adminToggleComplete() {
+  const newVal = !adminEditRound.completed;
+  await sbFetch('rounds?id=eq.' + adminEditRound.id, {
+    method: 'PATCH',
+    body: JSON.stringify({ completed: newVal })
+  });
+  adminEditRound.completed = newVal;
+  const rd = rounds.find(r => r.id === adminEditRound.id);
+  if (rd) rd.completed = newVal;
+
+  const toggleBtn = document.getElementById('admin-toggle-complete');
+  toggleBtn.textContent = newVal ? 'Reopen Round' : 'Mark Complete';
+  toggleBtn.className = newVal ? 'btn btn-secondary btn-sm' : 'btn btn-gold btn-sm';
+  document.getElementById('admin-round-meta').textContent =
+    fmtDate(adminEditRound.date) + ' · ' + (adminEditRound.format || 'Stroke Play') +
+    ' · ' + (adminEditRound.holes || 18) + ' holes · Code: ' + (adminEditRound.round_code || '—');
+
+  renderRounds();
+  renderLeaderboard();
+  showToast(newVal ? 'Round marked complete' : 'Round reopened');
+}
+
+async function adminDeleteRound() {
+  if (!confirm('Delete this round permanently? This cannot be undone.')) return;
+  await sbFetch('rounds?id=eq.' + adminEditRound.id, { method: 'DELETE', prefer: 'return=minimal' });
+  rounds = rounds.filter(r => r.id !== adminEditRound.id);
+  adminEditRound = null;
+  document.getElementById('admin-round-actions').style.display = 'none';
+  renderAdminPage();
+  renderRounds();
+  renderLeaderboard();
+  showToast('Round deleted');
+}
+
+async function adminEditPlayer(pid) {
+  const p = players.find(pl => pl.id === pid);
+  if (!p) return;
+  document.getElementById('inp-player-name').value = p.name;
+  document.getElementById('inp-player-ghin').value = p.ghin || '';
+  document.getElementById('inp-player-hcp').value = p.hcp || '';
+  // Temporarily switch save button to update mode
+  const btn = document.querySelector('#modal-add-player .btn-primary');
+  btn.textContent = 'Update Member';
+  btn.onclick = () => updatePlayer(pid);
+  openModal('modal-add-player');
+}
+
+async function updatePlayer(pid) {
+  const name = document.getElementById('inp-player-name').value.trim();
+  const ghin = document.getElementById('inp-player-ghin').value.trim();
+  const hcp = document.getElementById('inp-player-hcp').value;
+  if (!name) { showToast('Name required'); return; }
+
+  await sbFetch('players?id=eq.' + pid, {
+    method: 'PATCH',
+    body: JSON.stringify({ name, ghin: ghin || null, hcp: parseFloat(hcp) || 0 })
+  });
+
+  const p = players.find(pl => pl.id === pid);
+  if (p) { p.name = name; p.ghin = ghin; p.hcp = parseFloat(hcp) || 0; }
+
+  // Reset save button
+  const btn = document.querySelector('#modal-add-player .btn-primary');
+  btn.textContent = 'Add Member';
+  btn.onclick = savePlayer;
+
+  closeModal('modal-add-player');
+  renderRoster();
+  renderAdminPage();
+  showToast('Member updated!');
+}
+
+async function adminDeletePlayer(pid) {
+  const p = players.find(pl => pl.id === pid);
+  if (!confirm('Delete ' + p?.name + '? This cannot be undone.')) return;
+  await sbFetch('players?id=eq.' + pid, { method: 'DELETE', prefer: 'return=minimal' });
+  players = players.filter(pl => pl.id !== pid);
+  renderRoster();
+  renderAdminPage();
+  showToast('Member deleted');
+}
+
 </script>
 </body>
 </html>
